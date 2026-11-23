@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f7ff">
+  <title>寶可夢圖片探索站</title>
+  <style>
+    :root { color-scheme: light; font-family: "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif; color: #20243a; background: #f5f7ff; }
+    * { box-sizing: border-box; }
+    body { min-height: 100vh; margin: 0; display: grid; place-items: center; padding: 24px; background: radial-gradient(circle at 15% 15%, #e3edff 0, transparent 32%), radial-gradient(circle at 85% 85%, #ffe9d8 0, transparent 28%), #f8f9ff; }
+    main { width: min(100%, 680px); padding: clamp(24px, 6vw, 52px); border: 1px solid #e8eaf4; border-radius: 28px; background: rgba(255,255,255,.94); box-shadow: 0 24px 70px rgba(42,52,100,.12); text-align: center; }
+    .eyebrow { margin: 0 0 10px; color: #5969c9; font-size: .82rem; font-weight: 800; letter-spacing: .16em; }
+    h1 { margin: 0; font-size: clamp(1.8rem, 6vw, 2.65rem); line-height: 1.2; }
+    .intro { max-width: 470px; margin: 16px auto 26px; color: #62677d; line-height: 1.8; }
+    .image-frame { display: grid; place-items: center; width: min(100%, 360px); aspect-ratio: 1; margin: 0 auto 20px; overflow: hidden; border-radius: 24px; background: linear-gradient(145deg, #f0f3ff, #fff7ef); }
+    .image-frame img { width: 88%; height: 88%; object-fit: contain; }
+    .status { min-height: 1.8em; margin: 0 0 18px; color: #62677d; }
+    .status.error { color: #b42336; }
+    .status.success { color: #316b49; font-weight: 700; }
+    button { min-height: 50px; padding: 0 30px; border: 0; border-radius: 999px; background: #5969c9; color: white; font: inherit; font-weight: 800; cursor: pointer; box-shadow: 0 8px 18px rgba(89,105,201,.24); transition: transform .15s, background .15s; }
+    button:hover:not(:disabled) { transform: translateY(-2px); background: #4858b8; }
+    button:disabled { cursor: wait; opacity: .6; }
+    .source-link { display: inline-block; margin-top: 24px; color: #5969c9; font-size: .9rem; }
+    @media (max-width: 480px) { body { padding: 14px; } main { border-radius: 22px; } .image-frame { border-radius: 18px; } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; } }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="eyebrow">POKÉMON DISCOVERY</p>
+    <h1>寶可夢圖片探索站</h1>
+    <p class="intro">按下「換一張」隨機探索一隻寶可夢，看看牠的官方圖片與名稱。</p>
+    <div class="image-frame">
+      <img id="pokemon-image" alt="" hidden>
+    </div>
+    <p id="status" class="status" role="status" aria-live="polite">準備開始探索！</p>
+    <button id="next-button" type="button">換一張</button>
+    <br>
+    <a class="source-link" href="https://pokeapi.co/docs/v2" target="_blank" rel="noopener noreferrer">查看 PokéAPI 官方文件</a>
+  </main>
+  <script>
+    const button = document.getElementById("next-button");
+    const image = document.getElementById("pokemon-image");
+    const status = document.getElementById("status");
+
+    function showStatus(message, kind) {
+      status.textContent = message;
+      status.className = `status${kind ? ` ${kind}` : ""}`;
+    }
+
+    image.addEventListener("error", () => {
+      image.hidden = true;
+      showStatus("圖片載入失敗，請按「換一張」再試一次。", "error");
+    });
+
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      image.hidden = true;
+      showStatus("正在尋找寶可夢…", "");
+      try {
+        const response = await fetch("/api/pokemon");
+        const result = await response.json();
+        if (!response.ok || !result.ok) {
+          throw new Error(typeof result.error === "string" ? result.error : "暫時無法取得資料，請稍後再試。");
+        }
+        image.alt = `寶可夢 ${result.pokemon_name}`;
+        image.onload = () => {
+          image.hidden = false;
+          showStatus(`#${result.pokemon_id} ${result.pokemon_name}`, "success");
+        };
+        image.src = result.image_url;
+      } catch (error) {
+        showStatus(error instanceof Error ? error.message : "發生未知錯誤，請稍後再試。", "error");
+      } finally {
+        button.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
